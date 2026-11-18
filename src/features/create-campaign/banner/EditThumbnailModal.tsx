@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react'
-import { AlertIcon, EyeIcon, EyeOffIcon, UploadIcon } from '../../../components/icons'
+import { AlertIcon, EyeIcon, EyeOffIcon, TrashIcon, UploadIcon } from '../../../components/icons'
 import {
   BANNER_SPEC,
   BANNER_SURFACES,
@@ -78,7 +78,7 @@ export function EditThumbnailModal({
   const inputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ x: number; y: number; focal: Point } | null>(null)
+  const drag = useRef<{ x: number; y: number; focal: Point; id: number; active: boolean } | null>(null)
 
   const [src, setSrc] = useState<SourceImage | null>(initial?.source ?? null)
   const [focal, setFocal] = useState<Point>(initial?.focal ?? CENTER)
@@ -87,6 +87,7 @@ export function EditThumbnailModal({
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [panning, setPanning] = useState(false)
 
   useEffect(() => {
     if (initialFile) void load(initialFile)
@@ -119,6 +120,14 @@ export function EditThumbnailModal({
     }
   }
 
+  function removeImage() {
+    release(src)
+    setSrc(null)
+    setFocal(CENTER)
+    setError(null)
+    canvasRef.current?.focus()
+  }
+
   function cancel() {
     release(src)
     onClose()
@@ -143,13 +152,24 @@ export function EditThumbnailModal({
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
     if (!canPan) return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { x: e.clientX, y: e.clientY, focal }
+    // Capture only once the pointer really moves, so a plain click on "Hapus Gambar" still works
+    // and a drag that starts on the button never deletes the image.
+    drag.current = { x: e.clientX, y: e.clientY, focal, id: e.pointerId, active: false }
+  }
+  function endPan() {
+    drag.current = null
+    setPanning(false)
   }
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     const d = drag.current
     const box = canvasRef.current?.getBoundingClientRect()
     if (!d || !box || !visible) return
+    if (!d.active) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 4) return
+      d.active = true
+      e.currentTarget.setPointerCapture(d.id)
+      setPanning(true)
+    }
     const dx = (e.clientX - d.x) / box.width
     const dy = (e.clientY - d.y) / box.height
     setFocal({
@@ -203,7 +223,7 @@ export function EditThumbnailModal({
             <div className="rounded-[20px] border border-white/10 p-2 shadow-[0_1px_2px_rgb(15_23_42/0.02)]">
               <div
                 ref={canvasRef}
-                role={src ? 'img' : 'button'}
+                role={src ? 'group' : 'button'}
                 tabIndex={0}
                 aria-label={
                   src
@@ -214,15 +234,15 @@ export function EditThumbnailModal({
                 onKeyDown={onCanvasKey}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
-                onPointerUp={() => (drag.current = null)}
-                onPointerCancel={() => (drag.current = null)}
+                onPointerUp={endPan}
+                onPointerCancel={endPan}
                 onDragOver={(e) => {
                   e.preventDefault()
                   setDragOver(true)
                 }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={onDrop}
-                className={`relative aspect-video w-full touch-none select-none overflow-hidden rounded-xl border shadow-[inset_0_2px_5px_rgb(0_0_0/0.15)] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${
+                className={`group relative aspect-video w-full touch-none select-none overflow-hidden rounded-xl border shadow-[inset_0_2px_5px_rgb(0_0_0/0.15)] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${
                   dragOver ? 'border-primary' : 'border-white/10'
                 } ${src ? `bg-[#0f172a] ${canPan ? 'cursor-grab active:cursor-grabbing' : ''}` : 'bg-surface-0 cursor-pointer'}`}
               >
@@ -237,6 +257,41 @@ export function EditThumbnailModal({
                 )}
 
                 <SurfaceFrames opacity={opacity / 100} hidden={hidden} empty={!src} />
+
+                {src && (
+                  <>
+                    {/* Hover / keyboard focus: dim + blur with a delete action. Hidden while panning. */}
+                    <div
+                      className={`absolute inset-0 hidden items-center justify-center bg-black/50 opacity-0 backdrop-blur-sm transition-opacity duration-200 has-[:focus-visible]:opacity-100 [@media(hover:hover)]:flex ${
+                        panning ? '' : 'group-hover:opacity-100'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeImage()
+                        }}
+                        className={`${btn} border-white/15 bg-black/60 hover:border-danger/60 hover:text-danger`}
+                      >
+                        <TrashIcon size={16} />
+                        Hapus Gambar
+                      </button>
+                    </div>
+                    {/* Touch screens have no hover: keep a compact delete button visible. */}
+                    <button
+                      type="button"
+                      aria-label="Hapus gambar"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeImage()
+                      }}
+                      className="absolute bottom-2 right-2 hidden size-10 place-items-center rounded-lg border border-white/15 bg-black/60 text-white backdrop-blur-sm [@media(hover:none)]:grid"
+                    >
+                      <TrashIcon size={18} />
+                    </button>
+                  </>
+                )}
 
                 {!src && (
                   <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 text-center">
