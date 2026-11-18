@@ -47,7 +47,7 @@ function SurfaceFrames({ opacity, hidden, empty }: { opacity: number; hidden: Se
             style={{ left: `${(100 - width) / 2}%`, width: `${width}%`, borderColor: s.color }}
           >
             <span
-              className={`absolute top-px hidden px-2 py-[5px] sm:block text-[9px] font-medium uppercase leading-[1.3] tracking-[0.09px] whitespace-nowrap ${
+              className={`absolute top-px z-10 hidden px-2 py-[5px] font-geist text-[9px] font-medium leading-[1.3] tracking-[0.09px] whitespace-nowrap sm:block ${
                 s.labelSide === 'left' ? 'left-px rounded-br-lg' : 'right-px rounded-bl-lg'
               } ${isCanvas ? 'rounded-tl-[11px]' : ''}`}
               style={{ background: s.labelBg, color: empty ? s.labelText : (s.labelTextFilled ?? s.labelText) }}
