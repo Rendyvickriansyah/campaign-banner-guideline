@@ -108,3 +108,21 @@ export const ThreadsIcon = (p: IconProps) => (
     <path d="M16.6 11.5c-1.6-.9-6.6-1.1-6.6 1.8 0 2.6 4.6 2.6 5.6-.6.9-2.9-.3-1.2.4 1.4.6 2.2 3.4.8 3.4-2.1C19.4 7.6 16.6 4 12 4S4.5 7.4 4.5 12 7.4 20 12 20c2.6 0 4.4-.9 5.5-2.2" />
   </Base>
 )
+export const EyeIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Base>
+)
+export const EyeOffIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M10.6 5.6A10 10 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4M6.6 6.6C3.9 8.3 2.5 12 2.5 12S6 18.5 12 18.5c1.8 0 3.3-.6 4.6-1.4" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
+  </Base>
+)
+export const PencilIcon = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+    <path d="m13.5 6.5 4 4" />
+  </Base>
+)

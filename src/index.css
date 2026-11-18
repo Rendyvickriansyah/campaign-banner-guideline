@@ -31,3 +31,32 @@ body {
   color: #fff;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Range slider (Figma: track #1a1a1a, fill brand, 16px thumb). Fill width comes from --fill. */
+.range {
+  appearance: none;
+  height: 8px;
+  border-radius: 99px;
+  background: linear-gradient(to right, var(--color-brand) var(--fill), var(--color-stroke) var(--fill));
+  cursor: pointer;
+}
+.range::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  box-shadow: 0 0 0 3px rgb(245 73 0 / 0.25), 0 2px 4px rgb(0 0 0 / 0.4);
+}
+.range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-brand);
+  box-shadow: 0 0 0 3px rgb(245 73 0 / 0.25), 0 2px 4px rgb(0 0 0 / 0.4);
+}
+.range:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 6px;
+}

@@ -10,30 +10,33 @@ npm run dev
 
 ## The flow
 
-1. **Guideline dialog** opens the first time the admin clicks or drops a file into Thumbnail, for every new campaign. It shows the safe zone, the file specs, and do/don't examples. It can be reopened anytime with "Lihat panduan banner".
-2. **Automatic validation**: format, file size and resolution can block the upload. A ratio other than 16:9 or a resolution below the recommended size only shows a warning.
-3. **Focal point**: the admin drags the point (or uses the arrow keys) onto the important part of the image. The crop for each surface and the **safe zone** (the area visible on every screen) update live.
-4. **Preview per screen**: Mobile App (detail header 4:3, card list 2:1) and Web (16:9).
-5. **Confirmation**: "Selanjutnya" stays disabled until the banner passes validation and the admin confirms the preview.
+1. In Step 1 › **Thumbnail**, clicking or dropping a file opens the **Edit Thumbnail** modal (Figma node `8134:52843`).
+2. The 16:9 canvas shows a crop frame for every surface, all centered: **Web Banner**, **Mobile Card**, **Campaign Detail** and **Mobile Carousel**. Even before an image is chosen, the admin can see which areas are safe.
+3. Each frame can be hidden with the eye icon, and the overlay opacity can be adjusted with the slider.
+4. If the image is not 16:9, the admin drags it (or uses the arrow keys) to choose which part is shown.
+5. Validation:
+   - an unsupported format or a file over 5 MB is rejected straight away;
+   - if the 16:9 area is smaller than 1280×720 px, the **Selesai** button is disabled;
+   - below 1920×1080 px only a warning is shown.
+6. **Selesai** exports the visible 16:9 area as a new file (at most 1920 px wide) and returns it to Step 1. **Kembali** discards the changes.
 
 ## Contract for backend and mobile app ⚠️
 
-The previews are only accurate if **every platform renders the banner the same way**:
+The thumbnail file that gets uploaded is **always 16:9**. Every surface just needs to render it with:
 
 ```
 object-fit: cover;
-object-position: {focalPoint.x * 100}% {focalPoint.y * 100}%;
+object-position: center;
 ```
 
-- Store `focalPoint: { x: number, y: number }` (0–1, default `0.5, 0.5`) with the campaign, alongside `width` and `height`.
-- iOS/Android: use the image library's equivalent of cover plus alignment/focal point (for example, Coil/Glide with a custom transformation, or SwiftUI `.scaledToFill()` with an alignment offset).
+This way each surface shows exactly the frame drawn in the modal. No extra field needs to be stored.
 
 ## Configuration
 
 All rules live in `src/features/create-campaign/banner/bannerSpec.ts`:
 
 - `BANNER_SPEC`: ratio, min/recommended resolution, max size, file formats.
-- `BANNER_SURFACES`: the list of screens and their ratios. **The app ratios (4:3 and 2:1) are assumptions. Confirm them with the mobile team.** The safe zone, guideline and previews all update automatically from this list.
+- `BANNER_SURFACES`: the list of surfaces, their ratios and frame colors. The ratios are measured from the Figma frame (794×448 canvas: Mobile Card 652 px, Campaign Detail 419 px, Mobile Carousel 315 px wide). **Confirm them with the mobile team.** If the app changes, update the ratio here and the frames in the modal follow automatically.
 
 ## File structure
 
@@ -42,12 +45,9 @@ src/features/create-campaign/
   CreateCampaignModal.tsx      Step 1 modal (Figma)
   CampaignPreviewCard.tsx      Live preview card on the left
   banner/
-    bannerSpec.ts              Specs, crop/safe-zone math, validation
-    BannerUploadField.tsx      Upload field + state (entry point)
-    BannerGuidelineDialog.tsx  Guideline dialog
-    FocalPointEditor.tsx       Focal point editor + overlay
-    SurfaceOverlay.tsx         Crop frames per surface + safe zone
-    SurfacePreview.tsx         Mobile App / Web previews
+    bannerSpec.ts              Specs, crop math, validation, 16:9 export
+    BannerUploadField.tsx      Thumbnail field in Step 1 (entry point)
+    EditThumbnailModal.tsx     Edit Thumbnail modal (Figma)
 ```
 
 ## Notes

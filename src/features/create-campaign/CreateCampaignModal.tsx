@@ -1,6 +1,6 @@
 import { useState, type ComponentType } from 'react'
 import { ChevronDownIcon, InstagramIcon, ThreadsIcon, TiktokIcon, YoutubeIcon } from '../../components/icons'
-import { BannerUploadField, isBannerReady, type BannerValue } from './banner/BannerUploadField'
+import { BannerUploadField, type BannerValue } from './banner/BannerUploadField'
 import { CampaignPreviewCard } from './CampaignPreviewCard'
 
 const STEPS = [1, 2, 3, 4, 5]
@@ -67,7 +67,7 @@ export function CreateCampaignModal() {
   const [platforms, setPlatforms] = useState<string[]>(['instagram'])
   const [banner, setBanner] = useState<BannerValue | null>(null)
 
-  const canContinue = title.trim().length > 0 && platforms.length > 0 && isBannerReady(banner)
+  const canContinue = title.trim().length > 0 && platforms.length > 0 && !!banner
 
   const togglePlatform = (id: string) =>
     setPlatforms((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
@@ -79,7 +79,7 @@ export function CreateCampaignModal() {
           title={title}
           contentType={contentType}
           category={category}
-          banner={banner && !banner.checks.some((c) => c.status === 'fail') ? { src: banner.previewUrl, focal: banner.focalPoint } : null}
+          bannerUrl={banner?.url ?? null}
         />
 
         <form
@@ -87,13 +87,13 @@ export function CreateCampaignModal() {
           onSubmit={(e) => {
             e.preventDefault()
             if (!canContinue || !banner) return
-            // Hand-off to the API: upload the file and persist focalPoint with the campaign.
+            // Hand-off to the API: upload the 16:9 file; every surface center-crops it.
             console.info('Step 1 payload', {
               title,
               contentType,
               category,
               platforms,
-              banner: { file: banner.file, width: banner.width, height: banner.height, focalPoint: banner.focalPoint },
+              banner: { file: banner.file, width: banner.width, height: banner.height },
             })
           }}
         >
@@ -144,16 +144,9 @@ export function CreateCampaignModal() {
                 </div>
               </fieldset>
 
-              <BannerUploadField value={banner} onChange={setBanner} campaignTitle={title} />
+              <BannerUploadField value={banner} onChange={setBanner} />
 
               <div className="flex items-center justify-end gap-3">
-                {banner && (
-                  <p className="text-xs text-muted">
-                    {banner.checks.some((c) => c.status === 'fail')
-                      ? 'Ganti banner yang belum sesuai ketentuan'
-                      : !banner.safeZoneConfirmed && 'Konfirmasi preview banner untuk lanjut'}
-                  </p>
-                )}
                 <button
                   type="submit"
                   disabled={!canContinue}

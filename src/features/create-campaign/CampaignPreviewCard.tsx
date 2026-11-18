@@ -1,5 +1,4 @@
 import { InfoIcon, InstagramIcon, TiktokIcon, YoutubeIcon } from '../../components/icons'
-import { objectPosition, type Point } from './banner/bannerSpec'
 
 const pill =
   'rounded-full border-[0.8px] border-stroke bg-[linear-gradient(177deg,#000_31.7%,#262626_122%,#666_192%)] px-[18px] py-2 text-xs leading-[1.2]'
@@ -9,18 +8,18 @@ export function CampaignPreviewCard({
   title,
   contentType,
   category,
-  banner,
+  bannerUrl,
 }: {
   title: string
   contentType: string
   category: string
-  banner: { src: string; focal: Point } | null
+  bannerUrl: string | null
 }) {
   return (
     <aside className="relative hidden w-[398px] shrink-0 flex-col self-stretch bg-surface-0 shadow-card-inset md:flex">
       <div className="relative h-[224px] w-full overflow-hidden">
-        {banner ? (
-          <img src={banner.src} alt="" className="size-full object-cover" style={{ objectPosition: objectPosition(banner.focal) }} />
+        {bannerUrl ? (
+          <img src={bannerUrl} alt="" className="size-full object-cover" />
         ) : (
           // Placeholder artwork (the Figma default banner image could not be exported here).
           <div className="flex size-full items-center justify-center bg-[radial-gradient(90%_120%_at_50%_0%,#6b2c0c_0%,#1d0d05_55%,#030303_100%)]">
