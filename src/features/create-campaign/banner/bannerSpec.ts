@@ -61,50 +61,32 @@ export function cropRect(imageRatio: number, frameRatio: number, focal: Point): 
   return { x: 0, y: (1 - h) * focal.y, w: 1, h }
 }
 
-export type CheckStatus = 'pass' | 'warn' | 'fail'
-export type BannerCheck = { id: string; label: string; status: CheckStatus; message: string }
+export type ResolutionCheck = { status: 'pass' | 'warn' | 'fail'; message: string }
 
 export function formatBytes(bytes: number) {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`
 }
 
-export function checkFile(file: File): BannerCheck[] {
-  const typeOk = (BANNER_SPEC.acceptedTypes as readonly string[]).includes(file.type)
-  const sizeOk = file.size <= BANNER_SPEC.maxBytes
-  return [
-    {
-      id: 'format',
-      label: 'Format',
-      status: typeOk ? 'pass' : 'fail',
-      message: typeOk ? file.type.replace('image/', '').toUpperCase() : `Format belum didukung. Gunakan ${BANNER_SPEC.acceptedLabel}.`,
-    },
-    {
-      id: 'size',
-      label: 'Ukuran file',
-      status: sizeOk ? 'pass' : 'fail',
-      message: sizeOk ? formatBytes(file.size) : `File ${formatBytes(file.size)}, maksimal ${formatBytes(BANNER_SPEC.maxBytes)}.`,
-    },
-  ]
+/** Reason the file can't be used at all, or null. */
+export function fileError(file: File): string | null {
+  if (!(BANNER_SPEC.acceptedTypes as readonly string[]).includes(file.type))
+    return `Format belum didukung. Gunakan ${BANNER_SPEC.acceptedLabel}.`
+  if (file.size > BANNER_SPEC.maxBytes)
+    return `File ${formatBytes(file.size)}, maksimal ${formatBytes(BANNER_SPEC.maxBytes)}.`
+  return null
 }
 
 /** Resolution of the 16:9 area that will be exported. */
-export function checkResolution(width: number, height: number): BannerCheck {
+export function checkResolution({ width, height }: { width: number; height: number }): ResolutionCheck {
   const { min, recommended } = BANNER_SPEC
   if (width < min.width || height < min.height)
     return {
-      id: 'resolution',
-      label: 'Resolusi',
       status: 'fail',
       message: `Area 16:9 hanya ${width}×${height}px, minimal ${min.width}×${min.height}px agar tidak pecah di layar HP.`,
     }
   if (width < recommended.width)
-    return {
-      id: 'resolution',
-      label: 'Resolusi',
-      status: 'warn',
-      message: `${width}×${height}px. Disarankan ${recommended.width}×${recommended.height}px.`,
-    }
-  return { id: 'resolution', label: 'Resolusi', status: 'pass', message: `${width}×${height}px` }
+    return { status: 'warn', message: `${width}×${height}px. Disarankan ${recommended.width}×${recommended.height}px.` }
+  return { status: 'pass', message: `${width}×${height}px` }
 }
 
 export type SourceImage = { file: File; url: string; width: number; height: number }
@@ -116,7 +98,7 @@ export function readImage(file: File): Promise<SourceImage> {
     img.onload = () => resolve({ file, url, width: img.naturalWidth, height: img.naturalHeight })
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('File gambar tidak bisa dibaca. Coba file lain.'))
+      reject(new Error(`Could not decode ${file.name}`))
     }
     img.src = url
   })
@@ -145,13 +127,13 @@ export async function exportCrop(src: SourceImage, focal: Point): Promise<{ file
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')! // a fresh canvas always provides a 2d context
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, width, height)
 
   const type = src.file.type
   const blob = await new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Gagal memproses gambar.'))), type, 0.92),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas.toBlob returned null'))), type, 0.92),
   )
   const file = new File([blob], src.file.name, { type: blob.type })
   return { file, url: URL.createObjectURL(file), width, height }

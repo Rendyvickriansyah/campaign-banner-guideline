@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
 import { AlertIcon, EyeIcon, EyeOffIcon, TrashIcon, UploadIcon } from '../../../components/icons'
 import {
   BANNER_SPEC,
   BANNER_SURFACES,
   CANVAS_RATIO,
   CENTER,
-  checkFile,
   checkResolution,
   cropRect,
   cropSize,
   exportCrop,
+  fileError,
   formatBytes,
   objectPosition,
   readImage,
@@ -34,10 +34,10 @@ const clamp = (n: number) => Math.min(1, Math.max(0, n))
 const btn =
   'relative flex h-[42px] items-center justify-center gap-2 rounded-lg border border-white/10 px-5 text-base font-medium leading-[1.4] text-white shadow-card-inset [text-shadow:0_1px_2px_rgb(0_0_0/0.1)] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40'
 
-function SurfaceFrames({ opacity, hidden, empty }: { opacity: number; hidden: Set<string>; empty: boolean }) {
+function SurfaceFrames({ opacity, hiddenSurfaces, empty }: { opacity: number; hiddenSurfaces: Set<string>; empty: boolean }) {
   return (
     <div className="pointer-events-none absolute inset-0" style={{ opacity }}>
-      {BANNER_SURFACES.filter((s) => !hidden.has(s.id)).map((s) => {
+      {BANNER_SURFACES.filter((s) => !hiddenSurfaces.has(s.id)).map((s) => {
         const width = Math.min(1, toNumber(s.ratio) / CANVAS_RATIO) * 100
         const isCanvas = width === 100
         return (
@@ -82,8 +82,8 @@ export function EditThumbnailModal({
 
   const [src, setSrc] = useState<SourceImage | null>(initial?.source ?? null)
   const [focal, setFocal] = useState<Point>(initial?.focal ?? CENTER)
-  const [hidden, setHidden] = useState<Set<string>>(new Set())
-  const [opacity, setOpacity] = useState(80)
+  const [hiddenSurfaces, setHiddenSurfaces] = useState<Set<string>>(new Set())
+  const [overlayOpacity, setOverlayOpacity] = useState(80)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -92,7 +92,6 @@ export function EditThumbnailModal({
   useEffect(() => {
     if (initialFile) void load(initialFile)
     dialogRef.current?.focus()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -105,9 +104,9 @@ export function EditThumbnailModal({
   const release = (s: SourceImage | null) => s && s.url !== initial?.source.url && URL.revokeObjectURL(s.url)
 
   async function load(file: File) {
-    setError(null)
-    const fail = checkFile(file).find((c) => c.status === 'fail')
-    if (fail) return setError(fail.message)
+    const rejected = fileError(file)
+    setError(rejected)
+    if (rejected) return
     try {
       const next = await readImage(file)
       setSrc((prev) => {
@@ -115,8 +114,8 @@ export function EditThumbnailModal({
         return next
       })
       setFocal(CENTER)
-    } catch (e) {
-      setError((e as Error).message)
+    } catch {
+      setError('File gambar tidak bisa dibaca. Coba file lain.')
     }
   }
 
@@ -126,6 +125,12 @@ export function EditThumbnailModal({
     setFocal(CENTER)
     setError(null)
     canvasRef.current?.focus()
+  }
+
+  function onRemoveClick(e: MouseEvent) {
+    // Keep the click from reaching the canvas, which opens the file picker when empty.
+    e.stopPropagation()
+    removeImage()
   }
 
   function cancel() {
@@ -140,8 +145,8 @@ export function EditThumbnailModal({
       const out = await exportCrop(src, focal)
       if (initial && initial.source.url !== src.url) URL.revokeObjectURL(initial.source.url)
       onDone({ ...out, source: src, focal })
-    } catch (e) {
-      setError((e as Error).message)
+    } catch {
+      setError('Gagal memproses gambar. Coba lagi.')
       setSaving(false)
     }
   }
@@ -197,8 +202,8 @@ export function EditThumbnailModal({
     if (f) void load(f)
   }
 
-  const resolution = src ? checkResolution(cropSize(src, focal).width, cropSize(src, focal).height) : null
-  const blocking = resolution?.status === 'fail'
+  const resolution = src ? checkResolution(cropSize(src, focal)) : null
+  const resolutionIssue = resolution?.status === 'pass' ? null : resolution
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={cancel}>
@@ -218,7 +223,6 @@ export function EditThumbnailModal({
         </header>
 
         <div className="flex flex-col overflow-y-auto">
-          {/* Canvas */}
           <div className="p-4 sm:p-8">
             <div className="rounded-[20px] border border-white/10 p-2 shadow-[0_1px_2px_rgb(15_23_42/0.02)]">
               <div
@@ -256,11 +260,10 @@ export function EditThumbnailModal({
                   />
                 )}
 
-                <SurfaceFrames opacity={opacity / 100} hidden={hidden} empty={!src} />
+                <SurfaceFrames opacity={overlayOpacity / 100} hiddenSurfaces={hiddenSurfaces} empty={!src} />
 
                 {src && (
                   <>
-                    {/* Hover / keyboard focus: dim + blur with a delete action. Hidden while panning. */}
                     <div
                       className={`absolute inset-0 hidden items-center justify-center bg-black/50 opacity-0 backdrop-blur-sm transition-opacity duration-200 has-[:focus-visible]:opacity-100 [@media(hover:hover)]:flex ${
                         panning ? '' : 'group-hover:opacity-100'
@@ -268,10 +271,7 @@ export function EditThumbnailModal({
                     >
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          removeImage()
-                        }}
+                        onClick={onRemoveClick}
                         className={`${btn} border-white/15 bg-black/60 hover:border-danger/60 hover:text-danger`}
                       >
                         <TrashIcon size={16} />
@@ -282,10 +282,7 @@ export function EditThumbnailModal({
                     <button
                       type="button"
                       aria-label="Hapus gambar"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeImage()
-                      }}
+                      onClick={onRemoveClick}
                       className="absolute bottom-2 right-2 hidden size-10 place-items-center rounded-lg border border-white/15 bg-black/60 text-white backdrop-blur-sm [@media(hover:none)]:grid"
                     >
                       <TrashIcon size={18} />
@@ -308,16 +305,16 @@ export function EditThumbnailModal({
               </div>
             </div>
 
-            {(error || (resolution && resolution.status !== 'pass') || canPan) && (
+            {(error || resolutionIssue || canPan) && (
               <div className="mt-3 flex flex-col gap-1.5 text-xs leading-[1.4]" aria-live="polite">
                 {error && (
                   <p role="alert" className="flex items-start gap-1.5 text-danger">
                     <AlertIcon size={14} className="mt-px shrink-0" /> {error}
                   </p>
                 )}
-                {resolution && resolution.status !== 'pass' && (
-                  <p className={`flex items-start gap-1.5 ${resolution.status === 'fail' ? 'text-danger' : 'text-warning'}`}>
-                    <AlertIcon size={14} className="mt-px shrink-0" /> {resolution.message}
+                {resolutionIssue && (
+                  <p className={`flex items-start gap-1.5 ${resolutionIssue.status === 'fail' ? 'text-danger' : 'text-warning'}`}>
+                    <AlertIcon size={14} className="mt-px shrink-0" /> {resolutionIssue.message}
                   </p>
                 )}
                 {canPan && (
@@ -327,11 +324,10 @@ export function EditThumbnailModal({
             )}
           </div>
 
-          {/* Legend + opacity */}
           <div className="flex flex-col gap-[30px] px-4 sm:px-8">
             <ul className="grid grid-cols-2 gap-x-5 gap-y-3 md:flex md:items-center md:justify-between">
               {BANNER_SURFACES.map((s) => {
-                const isHidden = hidden.has(s.id)
+                const isHidden = hiddenSurfaces.has(s.id)
                 return (
                   <li key={s.id} className="flex items-center gap-5">
                     <span className={`flex items-center gap-3 ${isHidden ? 'opacity-40' : ''}`}>
@@ -343,11 +339,11 @@ export function EditThumbnailModal({
                       aria-pressed={!isHidden}
                       aria-label={`${isHidden ? 'Tampilkan' : 'Sembunyikan'} overlay ${s.label}`}
                       onClick={() =>
-                        setHidden((h) => {
-                          const n = new Set(h)
-                          if (n.has(s.id)) n.delete(s.id)
-                          else n.add(s.id)
-                          return n
+                        setHiddenSurfaces((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(s.id)) next.delete(s.id)
+                          else next.add(s.id)
+                          return next
                         })
                       }
                       className="-m-2 grid size-9 place-items-center rounded-md text-teks hover:bg-white/5 hover:text-white"
@@ -364,17 +360,17 @@ export function EditThumbnailModal({
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between text-base font-medium">
                 <label htmlFor="overlay-opacity">Overlay Opacity</label>
-                <output htmlFor="overlay-opacity">{opacity}%</output>
+                <output htmlFor="overlay-opacity">{overlayOpacity}%</output>
               </div>
               <input
                 id="overlay-opacity"
                 type="range"
                 min={0}
                 max={100}
-                value={opacity}
-                onChange={(e) => setOpacity(Number(e.target.value))}
+                value={overlayOpacity}
+                onChange={(e) => setOverlayOpacity(Number(e.target.value))}
                 className="range w-full"
-                style={{ ['--fill' as string]: `${opacity}%` }}
+                style={{ ['--fill' as string]: `${overlayOpacity}%` }}
               />
             </div>
           </div>
@@ -392,7 +388,7 @@ export function EditThumbnailModal({
             <button
               type="button"
               onClick={done}
-              disabled={!src || blocking || saving}
+              disabled={!src || resolution?.status === 'fail' || saving}
               className={`${btn} w-[120px] bg-brand hover:bg-[#ff5a12]`}
             >
               {saving ? 'Memproses…' : 'Selesai'}

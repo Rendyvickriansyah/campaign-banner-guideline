@@ -1,6 +1,7 @@
 import { useState, type ComponentType } from 'react'
 import { ChevronDownIcon, InstagramIcon, ThreadsIcon, TiktokIcon, YoutubeIcon } from '../../components/icons'
-import { BannerUploadField, type BannerValue } from './banner/BannerUploadField'
+import { BannerUploadField } from './banner/BannerUploadField'
+import type { ThumbnailResult } from './banner/EditThumbnailModal'
 import { CampaignPreviewCard } from './CampaignPreviewCard'
 
 const STEPS = [1, 2, 3, 4, 5]
@@ -12,6 +13,15 @@ const PLATFORMS: { id: string; label: string; Icon: ComponentType<{ size?: numbe
 ]
 const CONTENT_TYPES = ['UGC', 'Clipping', 'Review']
 const CATEGORIES = ['Entertainment', 'Gaming', 'Finance', 'Lifestyle']
+
+export type CampaignProfile = {
+  title: string
+  contentType: string
+  category: string
+  platforms: string[]
+  /** 16:9 file; every surface renders it with object-fit: cover, centered. */
+  thumbnail: File
+}
 
 function Stepper({ current }: { current: number }) {
   return (
@@ -60,12 +70,12 @@ function Select({ id, label, value, options, onChange }: { id: string; label: st
   )
 }
 
-export function CreateCampaignModal() {
+export function CreateCampaignModal({ onNext }: { onNext: (profile: CampaignProfile) => void }) {
   const [title, setTitle] = useState('')
   const [contentType, setContentType] = useState('')
   const [category, setCategory] = useState('')
   const [platforms, setPlatforms] = useState<string[]>(['instagram'])
-  const [banner, setBanner] = useState<BannerValue | null>(null)
+  const [banner, setBanner] = useState<ThumbnailResult | null>(null)
 
   const canContinue = title.trim().length > 0 && platforms.length > 0 && !!banner
 
@@ -86,15 +96,8 @@ export function CreateCampaignModal() {
           className="flex min-w-0 flex-1 flex-col gap-10 overflow-y-auto bg-surface-1 p-6 shadow-card-inset sm:p-8"
           onSubmit={(e) => {
             e.preventDefault()
-            if (!canContinue || !banner) return
-            // Hand-off to the API: upload the 16:9 file; every surface center-crops it.
-            console.info('Step 1 payload', {
-              title,
-              contentType,
-              category,
-              platforms,
-              banner: { file: banner.file, width: banner.width, height: banner.height },
-            })
+            if (!banner || !canContinue) return
+            onNext({ title: title.trim(), contentType, category, platforms, thumbnail: banner.file })
           }}
         >
           <Stepper current={1} />

@@ -3,17 +3,13 @@ import { PencilIcon, TrashIcon, UploadIcon } from '../../../components/icons'
 import { EditThumbnailModal, type ThumbnailResult } from './EditThumbnailModal'
 import { BANNER_SPEC, formatBytes } from './bannerSpec'
 
-export type BannerValue = ThumbnailResult
-
 /** Step 1 › Thumbnail. Clicking or dropping opens the Edit Thumbnail modal. */
 export function BannerUploadField({
   value,
   onChange,
-  label = 'Thumbnail',
 }: {
-  value: BannerValue | null
-  onChange: (v: BannerValue | null) => void
-  label?: string
+  value: ThumbnailResult | null
+  onChange: (v: ThumbnailResult | null) => void
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -22,7 +18,10 @@ export function BannerUploadField({
 
   // Release the exported preview when it is replaced or removed.
   const url = value?.url
-  useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url])
+  useEffect(() => {
+    if (!url) return
+    return () => URL.revokeObjectURL(url)
+  }, [url])
 
   const openEditor = (file: File | null = null) => {
     setDroppedFile(file)
@@ -44,7 +43,7 @@ export function BannerUploadField({
   return (
     <div className="flex w-full flex-col gap-2.5">
       <span id={id} className="text-sm leading-[1.16] text-teks">
-        {label}
+        Thumbnail
       </span>
 
       {!value ? (
