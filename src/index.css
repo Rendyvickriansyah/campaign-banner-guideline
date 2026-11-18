@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/* Tokens taken from the Figma file (Orova Product Design › Step 1). */
+@theme {
+  --font-sans: 'Neue Montreal', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-brand: #f54900;
+  --color-primary: #fc5810;
+  --color-stroke: #1a1a1a;
+  --color-teks: #bbbbbb;
+  --color-text-1: #b8b8b8;
+  --color-muted: #737373;
+  --color-surface-0: #030303;
+  --color-surface-1: #090909;
+  --color-field: #0e0e0e;
+  --color-success: #22c55e;
+  --color-warning: #f5a524;
+  --color-danger: #ef4444;
+
+  --shadow-card-inset: inset 0 1px 1px 0 rgb(255 255 255 / 0.12), inset 0 -1.66px 1.66px 0 rgb(0 0 0 / 0.12);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #000;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+}
