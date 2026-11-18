@@ -19,6 +19,8 @@ export type BannerSurface = {
   color: string
   labelBg: string
   labelText: string
+  /** Label text once an image is loaded (Figma "Filled" state), if different. */
+  labelTextFilled?: string
   labelSide: 'left' | 'right'
 }
 
@@ -39,7 +41,7 @@ export const BANNER_SPEC = {
 export const BANNER_SURFACES: BannerSurface[] = [
   { id: 'web-banner', label: 'Web Banner', ratio: { w: 16, h: 9 }, color: '#22c55e', labelBg: '#038433', labelText: '#ffffff', labelSide: 'left' },
   { id: 'mobile-card', label: 'Mobile Card', ratio: { w: 652, h: 448 }, color: '#ef4444', labelBg: '#650000', labelText: '#ffffff', labelSide: 'left' },
-  { id: 'campaign-detail', label: 'Campaign Detail', ratio: { w: 419, h: 448 }, color: '#f59e0b', labelBg: '#f59e0b', labelText: '#521d00', labelSide: 'left' },
+  { id: 'campaign-detail', label: 'Campaign Detail', ratio: { w: 419, h: 448 }, color: '#f59e0b', labelBg: '#f59e0b', labelText: '#521d00', labelTextFilled: '#2d1203', labelSide: 'left' },
   { id: 'mobile-carousel', label: 'Mobile Carousel', ratio: { w: 315, h: 448 }, color: '#3b82f6', labelBg: '#0061ff', labelText: '#ffffff', labelSide: 'right' },
 ]
 

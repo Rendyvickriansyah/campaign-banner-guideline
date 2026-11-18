@@ -50,7 +50,7 @@ function SurfaceFrames({ opacity, hidden, empty }: { opacity: number; hidden: Se
               className={`absolute top-px hidden px-2 py-[5px] sm:block text-[9px] font-medium uppercase leading-[1.3] tracking-[0.09px] whitespace-nowrap ${
                 s.labelSide === 'left' ? 'left-px rounded-br-lg' : 'right-px rounded-bl-lg'
               } ${isCanvas ? 'rounded-tl-[11px]' : ''}`}
-              style={{ background: s.labelBg, color: s.labelText }}
+              style={{ background: s.labelBg, color: empty ? s.labelText : (s.labelTextFilled ?? s.labelText) }}
             >
               {s.label}
             </span>
@@ -222,16 +222,16 @@ export function EditThumbnailModal({
                 }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={onDrop}
-                className={`relative aspect-video w-full touch-none select-none overflow-hidden rounded-xl border bg-surface-0 shadow-[inset_0_2px_5px_rgb(0_0_0/0.15)] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${
+                className={`relative aspect-video w-full touch-none select-none overflow-hidden rounded-xl border shadow-[inset_0_2px_5px_rgb(0_0_0/0.15)] outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary ${
                   dragOver ? 'border-primary' : 'border-white/10'
-                } ${src ? (canPan ? 'cursor-grab active:cursor-grabbing' : '') : 'cursor-pointer'}`}
+                } ${src ? `bg-[#0f172a] ${canPan ? 'cursor-grab active:cursor-grabbing' : ''}` : 'bg-surface-0 cursor-pointer'}`}
               >
                 {src && (
                   <img
                     src={src.url}
                     alt=""
                     draggable={false}
-                    className="absolute inset-0 size-full object-cover"
+                    className="absolute inset-0 size-full object-cover opacity-90"
                     style={{ objectPosition: objectPosition(focal) }}
                   />
                 )}
